@@ -1,0 +1,26 @@
+{
+  "name": "lab10",
+  "version": "1.0.0",
+  "description": "admin quotes",
+  "main": "app.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/ctm93/lab10.git"
+  },
+  "author": "Cristina Martinez",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/ctm93/lab10/issues"
+  },
+  "homepage": "https://github.com/ctm93/lab10#readme",
+  "dependencies": {
+    "bcrypt": "^4.0.1",
+    "ejs": "^3.1.2",
+    "express": "^4.17.1",
+    "express-session": "^1.17.1",
+    "mysql": "^2.18.1"
+  }
+}
