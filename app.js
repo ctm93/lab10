@@ -17,10 +17,10 @@ app.set('view engine', 'ejs');
 
 /* Configure MySQL DBMS */
 const connection = mysql.createConnection({
-    host: 'ijj1btjwrd3b7932.cbetxkdyhwsb.us-east-1.rds.amazonaws.com',
-    user: 's21eknl7xsx2xw1k',
-    password: 'eui7hddmj7sor13n',
-    database: 'jloui7r3d3pm28he'
+    host: 'localhost',
+    user: 'mart',
+    password: 'mart',
+    database: 'authentication'
 });
 connection.connect();
 
@@ -49,9 +49,19 @@ function checkPassword(password, hash){
     });
 }
 
-/* Home Route*/
+/* Home Route */
 app.get('/', function(req, res){
-    res.render('home');
+    res.render('start');
+});
+
+app.get('/home', isAuthenticated, function(req, res){
+    var stmt = 'SELECT * FROM l9_author;';
+    var authors = null;
+    connection.query(stmt, function(error, results){
+        if(error) throw error;
+        if(results.length) authors = results;
+        res.render('home', {authors: authors, user: req.session.user});
+    });
 });
 
 /* Login Routes */
@@ -66,7 +76,7 @@ app.post('/login', async function(req, res){
     if(passwordMatch){
         req.session.authenticated = true;
         req.session.user = isUserExist[0].username;
-        res.redirect('/welcome');
+        res.redirect('/home');
     }
     else{
         res.render('login', {error: true});
@@ -97,9 +107,209 @@ app.get('/logout', function(req, res){
    res.redirect('/');
 });
 
-/* Welcome Route */
-app.get('/welcome', isAuthenticated, function(req, res){
-   res.render('welcome', {user: req.session.user}); 
+/*
+ *  Author Routes
+ */
+
+/* Create a new author - Get author information */
+app.get('/author/new', isAuthenticated, function(req, res){
+    res.render('author_new');
+});
+
+/* Create a new author - Add author into DBMS */
+app.post('/author/new', isAuthenticated, function(req, res){
+   //console.log(req.body);
+   connection.query('SELECT * FROM l9_author;', function(error, result){
+       if(error) throw error;
+       if(result.length){
+            var authorId = result[result.length - 1].authorId + 1;
+            var stmt = 'INSERT INTO l9_author ' +
+                      '(authorId, firstName, lastName, dob, dod, sex, profession, country, portrait, biography) '+
+                      'VALUES ' +
+                      '(' + 
+                       authorId + ',"' +
+                       req.body.firstname + '","' +
+                       req.body.lastname + '","' +
+                       req.body.dob + '","' +
+                       req.body.dod + '","';
+            if (req.body.sex != undefined) {
+                stmt += req.body.sex + '","';
+            } else {
+                stmt += "" + '","';
+            }
+            stmt += req.body.profession + '","' +
+                       req.body.portrait + '","' +
+                       req.body.country + '","' +
+                       req.body.biography + '"' +
+                       ');';
+            console.log(stmt);
+            connection.query(stmt, function(error, result){
+                if(error) throw error;
+                res.redirect('/home');
+            });
+       }
+   });
+});
+
+/* Show an author record */
+app.get('/author/:aid', isAuthenticated, function(req, res){
+    var stmt = 'SELECT * FROM l9_author WHERE authorId=' + req.params.aid + ';';
+    console.log(stmt);
+    connection.query(stmt, function(error, results){
+       if(error) throw error;
+       if(results.length){
+           var author = results[0];
+           author.dob = author.dob.toString().split(' ').slice(0,4).join(' ');
+           author.dod = author.dod.toString().split(' ').slice(0,4).join(' ');
+           res.render('author', {author: author});
+       }
+    });
+});
+
+/* Edit an author record - Display an author information */
+app.get('/author/:aid/edit', isAuthenticated, function(req, res){
+    var stmt = 'SELECT * FROM l9_author WHERE authorId=' + req.params.aid + ';';
+    connection.query(stmt, function(error, results){
+        if(error) throw error;
+        if(results.length){
+            var author = results[0];
+            //author.dob = author.dob.toISOString().split('T')[0];
+            //author.dod = author.dod.toISOString().split('T')[0];
+            res.render('author_edit', {author: author});
+       }
+    });
+});
+
+/* Edit an author record - Update an author in DBMS */
+app.put('/author/:aid', isAuthenticated, function(req, res){
+    console.log(req.body);
+    var stmt = 'UPDATE l9_author SET ' +
+                'firstName = "'+ req.body.firstname + '",' +
+                'lastName = "'+ req.body.lastname + '",' +
+                'dob = "'+ req.body.dob + '",' +
+                'dod = "'+ req.body.dod + '",';
+    if (req.body.sex != undefined) {
+        stmt += 'sex = "'+ req.body.sex + '",';
+    }
+    stmt += 'profession = "'+ req.body.profession + '",' +
+                'portrait = "'+ req.body.portrait + '",' +
+                'country = "'+ req.body.country + '",' +
+                'biography = "'+ req.body.biography + '"' +
+                'WHERE authorId = ' + req.params.aid + ";";
+    //console.log(stmt);
+    connection.query(stmt, function(error, result){
+        if(error) throw error;
+        res.redirect('/author/' + req.params.aid);
+    });
+});
+
+app.get('/author/:aid/confirmdelete', isAuthenticated, function(req, res){
+    var stmt = 'SELECT * FROM l9_author WHERE authorId=' + req.params.aid + ';';
+    connection.query(stmt, function(error, results){
+       if(error) throw error;
+       if(results.length){
+           var author = results[0];
+           res.render('author_delete', {author: author});
+       }
+    });
+});
+
+/* Delete an author record */
+app.get('/author/:aid/delete', isAuthenticated, function(req, res){
+    var stmt = 'DELETE from l9_author WHERE authorId='+ req.params.aid + ';';
+    connection.query(stmt, function(error, result){
+        if(error) throw error;
+        res.redirect('/home');
+    });
+});
+
+
+/*
+ *  Quote Routes
+ */
+/* Create a new quote - Get quote information */
+app.get('/author/:aid/quotes/new', isAuthenticated, function(req, res){
+    res.render('quote_new', {authorId: req.params.aid});
+});
+
+/* Create a new quote - Add quote into DBMS */
+app.post('/author/:aid/quotes', isAuthenticated, function(req, res){
+    //console.log(req.body);
+    connection.query('SELECT * FROM l9_quotes;', function(error, result){
+       if(error) throw error;
+       if(result.length){
+            var quoteId = result[result.length - 1].quoteId + 1;
+            var stmt = 'INSERT INTO l9_quotes ' +
+                      '(quoteId, quote, authorId, category, likes) '+
+                      'VALUES ' +
+                      '(' + 
+                       quoteId + ',"' +
+                       req.body.quote + '",' +
+                       req.params.aid + ',"' +
+                       req.body.category + '",' +
+                       req.body.likes +
+                       ');';
+            console.log(stmt);
+            connection.query(stmt, function(error, result){
+                if(error) throw error;
+                res.redirect('/author/'+ req.params.aid +'/quotes');
+            });
+       }
+    });
+});
+
+/* Show a quote record */
+app.get('/author/:aid/quotes', isAuthenticated, function(req, res){
+    var stmt = 'select firstName, lastName, quote, quoteId '+
+               'from l9_author, l9_quotes '+
+               'where l9_author.authorId=l9_quotes.authorId '+
+               'and l9_author.authorId='+ req.params.aid + ';';
+    console.log(stmt);
+    var name = null;
+    var quotes = null;
+    connection.query(stmt, function(error, results){
+        if(error) throw error;
+        if(results.length){
+            name = results[0].firstName + ' ' + results[0].lastName;
+            quotes = results;
+        }
+        res.render('quotes', {name: name, authorId: req.params.aid, quotes: quotes});
+    });
+});
+
+/* Edit a quote record - Display a quote information */
+app.get('/author/:aid/quotes/:qid/edit', isAuthenticated, function(req, res){
+    var stmt = 'SELECT * FROM l9_quotes WHERE quoteId=' + req.params.qid + ';';
+    connection.query(stmt, function(error, results){
+       if(error) throw error;
+       if(results.length){
+           res.render('quote_edit', {quote: results[0]});
+       }
+    });
+});
+
+/* Edit a quote record - Update a quote in DBMS */
+app.put('/author/:aid/quotes/:qid', isAuthenticated, function(req, res){
+    //console.log(req.body);
+    var stmt = 'UPDATE l9_quotes SET ' +
+                'quote = "'+ req.body.quote + '",' +
+                'likes = '+ req.body.likes + ',' +
+                'category = "'+ req.body.category + '" ' +
+                'WHERE quoteId = ' + req.params.qid + ";";
+    console.log(stmt);
+    connection.query(stmt, function(error, result){
+        if(error) throw error;
+        res.redirect('/author/' + req.params.aid + '/quotes');
+    });
+});
+
+/* Delete a quote record */
+app.get('/author/:aid/quotes/:qid/delete', isAuthenticated, function(req, res){
+    var stmt = 'DELETE from l9_quotes WHERE quoteId='+ req.params.qid + ';';
+    connection.query(stmt, function(error, result){
+        if(error) throw error;
+        res.redirect('/author/' + req.params.aid + '/quotes/');
+    });
 });
 
 /* Error Route*/

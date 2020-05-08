@@ -1,4 +1,19 @@
-body{
-	margin: 10px 0px auto auto;
-	text-align: center;
+.jumbotron{
+    background: url("https://i.pinimg.com/originals/32/e0/13/32e0137cd92ec7f068f534a68acb4365.jpg") no-repeat center center; 
+    -webkit-background-size: 100% 100%;
+    -moz-background-size: 100% 100%;
+    -o-background-size: 100% 100%;
+    background-size: 100% 100%;
+    text-align:center;
+   
+}
+
+.jumbotron h3{
+    color: white;
+    font-size: 60px;
+}
+
+.jumbotron h4{
+    color: white;
+    font-size: 40px;
 }
